@@ -47,13 +47,17 @@ button.logoutBtn:hover { background:#c0392b; }
     </select>
     <div id="studentLoginDiv" style="display:none;">
       <h3>Select Student</h3>
-      <select id="studentNameSelect"></select>
+      <select id="studentNameSelect">
+        <option value="">--Choose Student--</option>
+      </select>
     </div>
     <div id="counselorLoginDiv" style="display:none;">
       <h3>Select Counselor</h3>
-      <select id="counselorNameSelect"></select>
+      <select id="counselorNameSelect">
+        <option value="">--Choose Counselor--</option>
+      </select>
     </div>
-    <button onclick="login()">Login</button>
+    <button id="loginBtn" onclick="login()" disabled>Login</button>
   </div>
 </div>
 
@@ -78,29 +82,41 @@ button.logoutBtn:hover { background:#c0392b; }
 </div>
 
 <script>
-// DATA
 let students=[
   {name:'Alex', scoreHistory:[70,75,80], notes:'Doing well', appointments:['2025-11-01: Counseling'], parentRequests:['2025-11-10: New session']},
   {name:'Jamie', scoreHistory:[65,68,70], notes:'Needs support', appointments:['2025-10-30: Follow-up'], parentRequests:[]}
 ];
 let counselors=['Dr. Smith','Dr. Lee'];
-let currentStudentIndex=0;
-let currentCounselorIndex=0;
+let currentStudentIndex=null;
+let currentCounselorIndex=null;
 
-// ROLE SELECTION
+// Utility function: Enable or disable login button
+function updateLoginBtnState() {
+  const role = document.getElementById('roleSelect').value;
+  let enable = false;
+  if (role === 'student') {
+    enable = !!document.getElementById('studentNameSelect').value;
+  } else if (role === 'counselor') {
+    enable = !!document.getElementById('counselorNameSelect').value;
+  }
+  document.getElementById('loginBtn').disabled = !enable;
+}
+
+// Populate selects on role change
 document.getElementById('roleSelect').addEventListener('change', function(){
   const val=this.value;
+  document.getElementById('loginBtn').disabled = true;
   if(val==='student'){
     document.getElementById('studentLoginDiv').style.display='block';
     document.getElementById('counselorLoginDiv').style.display='none';
     const sel=document.getElementById('studentNameSelect');
-    sel.innerHTML='';
+    sel.innerHTML='<option value="">--Choose Student--</option>';
     students.forEach((s,i)=>sel.add(new Option(s.name,i)));
   } else if(val==='counselor'){
     document.getElementById('studentLoginDiv').style.display='none';
     document.getElementById('counselorLoginDiv').style.display='block';
     const sel=document.getElementById('counselorNameSelect');
-    sel.innerHTML='';
+    sel.innerHTML='<option value="">--Choose Counselor--</option>';
     counselors.forEach((c,i)=>sel.add(new Option(c,i)));
   } else {
     document.getElementById('studentLoginDiv').style.display='none';
@@ -108,18 +124,27 @@ document.getElementById('roleSelect').addEventListener('change', function(){
   }
 });
 
+// Update login button state on select change
+document.getElementById('studentNameSelect').addEventListener('change', updateLoginBtnState);
+document.getElementById('counselorNameSelect').addEventListener('change', updateLoginBtnState);
+
 // LOGIN
 function login(){
   const role=document.getElementById('roleSelect').value;
   if(!role) return alert('Select role');
+
   if(role==='student'){
-    currentStudentIndex=document.getElementById('studentNameSelect').value;
+    const idx = document.getElementById('studentNameSelect').value;
+    if(idx === "") return alert("Select a student");
+    currentStudentIndex = parseInt(idx, 10);
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('studentDashboard').style.display='block';
     showStudentDashboard();
   }
   if(role==='counselor'){
-    currentCounselorIndex=document.getElementById('counselorNameSelect').value;
+    const idx = document.getElementById('counselorNameSelect').value;
+    if(idx === "") return alert("Select a counselor");
+    currentCounselorIndex = parseInt(idx, 10);
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('counselorDashboard').style.display='block';
     showCounselorDashboard();
@@ -131,6 +156,10 @@ function logout(){
   document.getElementById('studentDashboard').style.display='none';
   document.getElementById('counselorDashboard').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('roleSelect').selectedIndex = 0;
+  document.getElementById('studentLoginDiv').style.display='none';
+  document.getElementById('counselorLoginDiv').style.display='none';
+  document.getElementById('loginBtn').disabled = true;
 }
 
 // DASHBOARD FUNCTIONS
@@ -141,33 +170,33 @@ function showStudentDashboard(){
     <p><strong>Score:</strong> ${student.scoreHistory[student.scoreHistory.length-1]}</p>
     <p><strong>Notes:</strong> ${student.notes}</p>
     <h3>Score History</h3>
-    <div class="scoreChart">${student.scoreHistory.map(s=>⁠ <div class="scoreBar" style="height:${s*1.5}px">${s}</div> ⁠).join('')}</div>
+    <div class="scoreChart">${student.scoreHistory.map(s=>`<div class="scoreBar" style="height:${s*1.5}px">${s}</div>`).join('')}</div>
   `;
   const types=['Counseling','Follow-up','Parent Meeting'];
   const dates=['2025-11-01','2025-11-02','2025-11-03','2025-11-10'];
   document.getElementById('studentAppointmentsDiv').innerHTML=`
     <h2 style="color:#0077cc;">Appointments</h2>
-    ${student.appointments.map(a=>⁠ <div class="appointment accepted">${a}</div> ⁠).join('')}
+    ${student.appointments.map(a=>`<div class="appointment accepted">${a}</div>`).join('')}
     <h3 style="margin-top:15px;">Request Appointment</h3>
-    <select id="apptDate">${dates.map(d=>⁠ <option value="${d}">${d}</option> ⁠).join('')}</select>
-    <select id="apptType">${types.map(t=>⁠ <option value="${t}">${t}</option> ⁠).join('')}</select>
+    <select id="apptDate">${dates.map(d=>`<option value="${d}">${d}</option>`).join('')}</select>
+    <select id="apptType">${types.map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
     <button onclick="requestAppointment()">Request</button>
     <h4 style="margin-top:10px; color:#555;">Pending Requests:</h4>
-    ${student.parentRequests.map(r=>⁠ <div class="appointment pending">${r}</div> ⁠).join('')}
+    ${student.parentRequests.map(r=>`<div class="appointment pending">${r}</div>`).join('')}
   `;
 }
 
 function requestAppointment(){
   const date=document.getElementById('apptDate').value;
   const type=document.getElementById('apptType').value;
-  const val=⁠ ${date}: ${type} ⁠;
+  const val=`${date}: ${type}`;
   students[currentStudentIndex].parentRequests.push(val);
   showStudentDashboard();
 }
 
 // COUNSELOR DASHBOARD
 function showCounselorDashboard(){
-  const studentList = students.map((s,i)=>⁠ <option value="${i}">${s.name}</option> ⁠).join('');
+  const studentList = students.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
   document.getElementById('counselorScorecardDiv').innerHTML=`
     <h2 style="color:#0077cc;">Student Selection</h2>
     <select id="counselorStudentSelect" onchange="loadCounselorStudent()">${studentList}</select>
@@ -187,7 +216,7 @@ function loadCounselorStudent(){
   const student=students[idx];
   document.getElementById('cNotes').value=student.notes;
   document.getElementById('cScore').value=student.scoreHistory[student.scoreHistory.length-1];
-  document.getElementById('cScoreChart').innerHTML=student.scoreHistory.map(s=>⁠ <div class="scoreBar" style="height:${s*1.5}px">${s}</div> ⁠).join('');
+  document.getElementById('cScoreChart').innerHTML=student.scoreHistory.map(s=>`<div class="scoreBar" style="height:${s*1.5}px">${s}</div>`).join('');
   updateCounselorAppointments();
 }
 
@@ -195,7 +224,7 @@ function updateScore(){
   const idx=document.getElementById('counselorStudentSelect').value;
   const student=students[idx];
   const notes=document.getElementById('cNotes').value;
-  const score=parseInt(document.getElementById('cScore').value);
+  const score=parseInt(document.getElementById('cScore').value, 10);
   if(!isNaN(score)) student.scoreHistory.push(score);
   student.notes=notes;
   loadCounselorStudent();
@@ -207,9 +236,9 @@ function updateCounselorAppointments(){
   document.getElementById('counselorAppointmentsDiv').innerHTML=`
     <h2 style="color:#0077cc;">Appointments</h2>
     <h3>Accepted</h3>
-    ${student.appointments.map(a=>⁠ <div class="appointment accepted">${a}</div> ⁠).join('')}
+    ${student.appointments.map(a=>`<div class="appointment accepted">${a}</div>`).join('')}
     <h3>Pending Requests</h3>
-    ${student.parentRequests.map((r,i)=>⁠ <div class="appointment pending">${r} <button onclick="acceptAppointment(${idx},${i})">Accept</button></div> ⁠).join('')}
+    ${student.parentRequests.map((r,i)=>`<div class="appointment pending">${r} <button onclick="acceptAppointment(${idx},${i})">Accept</button></div>`).join('')}
   `;
 }
 
